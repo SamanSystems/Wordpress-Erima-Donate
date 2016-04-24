@@ -61,7 +61,7 @@ function ErimaZarinpalDonateForm() {
   //            REQUEST
   if(isset($_POST['submit']) && $_POST['submit'] == 'پرداخت')
   {
-    require_once( LIBDIR . '/nusoap.php' );
+    //require_once( LIBDIR . '/nusoap.php' );
     
     if($MerchantID == '')
     {
@@ -97,9 +97,9 @@ function ErimaZarinpalDonateForm() {
       
       
       // URL also Can be https://ir.zarinpal.com/pg/services/WebGate/wsdl
-      $client = new nusoap_client('https://de.zarinpal.com/pg/services/WebGate/wsdl', 'wsdl'); 
-      $client->soap_defencoding = 'UTF-8';
-      $result = $client->call('PaymentRequest', array(
+      $client = new SoapClient('https://www.zarinpal.com/pg/services/WebGate/wsdl', array('encoding' => 'UTF-8'));
+
+       $result = $client->PaymentRequest(
                               array(
                                   'MerchantID' 	=> $MerchantID,
                                   'Amount' 		=> $SendAmount,
@@ -108,16 +108,16 @@ function ErimaZarinpalDonateForm() {
                                   'Mobile' 		=> $Mobile,
                                   'CallbackURL' 	=> $CallbackURL
                                 )
-                              )
+                              
       );
       
       //Redirect to URL You can do it also by creating a form
-      if($result['Status'] == 100)
+      if($result->Status == 100)
       {
         // WruteToDB
         
         EZD_AddDonate(array(
-					'Authority'     => $result['Authority'],
+					'Authority'     => $result->Authority,
 					'Name'          => $Name,
 					'AmountTomaan'  => $SendAmount,
 					'Mobile'        => $Mobile,
@@ -137,13 +137,13 @@ function ErimaZarinpalDonateForm() {
         ));
         
         //Header('Location: https://www.zarinpal.com/pg/StartPay/'.$result['Authority']);
-        $Location = 'https://www.zarinpal.com/pg/StartPay/'.$result['Authority'];
+        $Location = 'https://www.zarinpal.com/pg/StartPay/'.$result->Authority;
         
         return "<script>document.location = '${Location}'</script><center>در صورتی که به صورت خودکار به درگاه بانک منتقل نشدید <a href='${Location}'>اینجا</a> را کلیک کنید.</center>";
       } 
       else 
       {
-        $error .= EZD_GetResaultStatusString($result['Status']) . "<br>\r\n";
+        $error .= EZD_GetResaultStatusString($result->Status) . "<br>\r\n";
       }
     }
   }
@@ -154,7 +154,7 @@ function ErimaZarinpalDonateForm() {
   ///             RESPONSE
   if(isset($_GET['Authority']))
   {
-    require_once( LIBDIR . '/nusoap.php' );
+    //require_once( LIBDIR . '/nusoap.php' );
     
     $Authority = filter_input(INPUT_GET, 'Authority', FILTER_SANITIZE_SPECIAL_CHARS);
     
@@ -168,22 +168,23 @@ function ErimaZarinpalDonateForm() {
       else
       {
         // URL also Can be https://ir.zarinpal.com/pg/services/WebGate/wsdl
-        $client = new nusoap_client('https://de.zarinpal.com/pg/services/WebGate/wsdl', 'wsdl'); 
-        $client->soap_defencoding = 'UTF-8';
-        $result = $client->call('PaymentVerification', array(
+        //$client = new nusoap_client('https://de.zarinpal.com/pg/services/WebGate/wsdl', 'wsdl'); 
+		$client = new SoapClient('https://www.zarinpal.com/pg/services/WebGate/wsdl', array('encoding' => 'UTF-8'));
+  
+         $result = $client->PaymentVerification(
                                   array(
                                       'MerchantID'	 => $MerchantID,
                                       'Authority' 	 => $Record['Authority'],
                                       'Amount'	 	 => $Record['AmountTomaan']
                                     )
-                                  )
+                                  
         );
         
-        if($result['Status'] == 100)
+        if($result->Status == 100)
         {
           EZD_ChangeStatus($Authority, 'OK');
           $message .= get_option( 'EZD_IsOk') . "<br>\r\n";
-          $message .= 'کد پیگیری تراکنش:'. $result['RefID'] . "<br>\r\n";
+          $message .= 'کد پیگیری تراکنش:'. $result->RefID . "<br>\r\n";
           
           $EZD_TotalAmount = get_option("EZD_TotalAmount");
           update_option("EZD_TotalAmount" , $EZD_TotalAmount + $Record['AmountTomaan']);
@@ -192,7 +193,7 @@ function ErimaZarinpalDonateForm() {
         {
           EZD_ChangeStatus($Authority, 'ERROR');
           $error .= get_option( 'EZD_IsError') . "<br>\r\n";
-          $error .= EZD_GetResaultStatusString($result['Status']) . "<br>\r\n";
+          $error .= EZD_GetResaultStatusString($result->Status) . "<br>\r\n";
         }
       }
     } 
